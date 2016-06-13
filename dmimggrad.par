@@ -1,0 +1,7 @@
+infile,f,a,"",,,"Input image file name"
+outfile,f,a,"",,,"Output file name"
+gradient,s,a,laplace,laplace|roberts|prewitt|sobel|robison|kirsch,,"Which gradient estimator"
+value,s,a,mag,x|y|mag|angle,,"What to output"
+verbose,i,h,0,0,0,"Tool verbosity"
+clobber,b,h,no,,,"Clobber existing output?"
+mode,s,h,"ql",,,

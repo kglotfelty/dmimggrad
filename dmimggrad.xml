@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cxchelptopics SYSTEM "CXCHelp.dtd">
+<cxchelptopics>
+<ENTRY key="dmimggrad" context="tools" refkeywords="dm image images edge gradient laplace roberts prewitt sobel robison kirsch" seealsogroups="dmimgtools">
+<SYNOPSIS>
+  Computes the gradients of an image   
+</SYNOPSIS>
+<SYNTAX>
+<LINE>
+   dmimggrad infile outfile gradient value [verbose] [clobber]
+</LINE>
+
+</SYNTAX>
+<ADDRESS><URL>dmimggrad.html</URL></ADDRESS>
+<ADDRESS>
+<URL>http://cxc.harvard.edu/ciao/ahelp/dmimggrad.html</URL>
+
+</ADDRESS>
+<DESC>
+<PARA>
+  `dmimggrad' computes one of serveral gradient estimators of the input image.
+These gradients are useful as edge detectors in the input images.  The output
+image can be the gradient along either image axis (x or y), the magnitude of
+the gradient (sqrt((x^2)+(y^2))), or the angle of the gradient (atan2(y,x)).
+</PARA>
+<LIST>
+ <CAPTION>Gradient Estimators</CAPTION>
+  <ITEM> Laplace - The Laplace operator is not sensitive to rotation 
+(so X and Y) are the same.  There are several varients of this operator.  The 
+one dmimggrad uses is ((0,1,0),(1,-4,1),(0,1,0)).  Since this operator is 
+rotation invarient, the angle values are all identically 0.</ITEM>
+  <ITEM> Roberts - The Roberts operator uses a small convolution kernel and is
+marginally faster than the other operators; however, it is also more
+suspectable to noise.  The kernels (not quite x- and y-, but interpreted as
+such) are x=((1,0),(0,-1)) and y=((0,1),(-1,0))</ITEM>
+  <ITEM> Prewitt - The Prewitt operator can give directional info about the 
+angle of the gradient.  The kernels are x=((1,1,1),(0,0,0),(-1,-1,-1)) and
+y=((-1,-1,-1),(0,0,0),(1,1,1))</ITEM>
+  <ITEM> Sobel - The Sobel kernels are x=((1,2,1),(0,0,0),(-1,-2,-1)) and
+y=((-1,0,1),(-2,0,2),(-1,0,1)).  It ephases data in the same row more than
+the Prewitt.</ITEM>
+  <ITEM> Robinson - The kernels are x=((1,1,1),(1,-2,1),(-1,-1,-1)) and
+y=((-1,1,1),(-1,-2,1),(-1,1,1)) </ITEM>
+  <ITEM> Kirsch - The kernels are x=((3,3,3),(3,0,3),(-5,-5,-5)) and
+y=((-5,3,3),(-5,0,3),(-5,3,3)) </ITEM>
+
+</LIST>
+
+<PARA>
+  The output image can be either the gradient along the X-direction,
+along the Y-direction, the magnitude of the gradient, or the angle of the 
+gradient.
+</PARA>
+
+<PARA>
+  dmimggrad will respect the NULL or NaN values in the input image
+(the values are skipped an the mask is effectively reduced); similarly any
+image subspace (region filter) is respected.  Edges are clipped so that the 
+mask is again reduced in size.
+</PARA>
+<PARA>
+  Note:  These kernels are NOT energy preserving.  
+</PARA>
+</DESC>
+<QEXAMPLELIST>
+<QEXAMPLE>
+  <SYNTAX>
+    <LINE>
+  dmimggrad smoothed.fits mag.fits laplace mag
+    </LINE>
+  </SYNTAX>
+  <DESC>
+    <PARA>
+  Compute the Laplace gradient operator and output the magnitude
+  of the gradient.  As suggested by the infile name, pre-smoothing
+  images typically reduces noise and made finding edges easier.     
+    </PARA>
+  </DESC>
+</QEXAMPLE>
+
+<QEXAMPLE>
+  <SYNTAX>
+    <LINE>
+    dmimggrad smoothed.fits xgrad.fits sobel x
+    </LINE>
+   </SYNTAX>
+  <DESC>
+    <PARA>
+    Computes the Sobel gradient estimator in the X-direction.
+    </PARA>
+  </DESC>
+</QEXAMPLE>
+
+
+
+</QEXAMPLELIST>
+<PARAMLIST>
+<PARAM name="infile" type="file" reqd="yes" filetype="input">
+<SYNOPSIS>
+
+	The input image.
+    
+</SYNOPSIS>
+<DESC>
+<PARA>
+
+  The input 2D image.  
+      
+</PARA>
+
+</DESC>
+
+</PARAM>
+<PARAM name="outfile" type="file" reqd="yes" filetype="output">
+<SYNOPSIS>
+
+	The output file name
+    
+</SYNOPSIS>
+<DESC>
+<PARA>
+   The output gradient image.
+</PARA>
+
+</DESC>
+
+</PARAM>
+<PARAM name="gradient" type="string" reqd="yes" def="laplace">
+<SYNOPSIS>
+
+  Gradient operator
+    
+</SYNOPSIS>
+<DESC>
+<PARA>
+
+  The gradient estimator to use.  The available options are
+  laplace, roberts, prewitt, sobel, robison, and kirsch.
+
+</PARA>
+</DESC>
+
+</PARAM>
+<PARAM name="value" type="string" reqd="yes" def="mag" >
+<SYNOPSIS>
+  What values to output
+</SYNOPSIS>
+<DESC>
+  <PARA>
+  What values are to be computed for the output image. Valid
+  option are x (gradient in X-direction), y (gradient in the Y-direction),
+  mag (magnitude of gradient) and angle (angle of gradient)
+
+  </PARA>
+</DESC>
+</PARAM>
+
+<PARAM name="clobber" type="boolean" def="no">
+<SYNOPSIS>
+
+	Remove output if it exists?
+    
+</SYNOPSIS>
+<DESC>
+<PARA>
+
+	Used to specify whether or not to clobber existing file that
+	has the same name as the specified output file
+         
+</PARA>
+
+</DESC>
+
+</PARAM>
+<PARAM name="verbose" type="integer" def="0" min="0" max="5">
+<SYNOPSIS>
+
+	The tool chatter level
+    
+</SYNOPSIS>
+<DESC>
+<PARA>
+
+	Verbose can be from 0 to 5, generating different amounts
+        of debugging output.
+         
+</PARA>
+
+</DESC>
+
+</PARAM>
+</PARAMLIST>
+<BUGS><PARA>
+	See the
+        <HREF link="http://cxc.harvard.edu/ciao/bugs/dmimggrad.html">bugs page
+	for this tool</HREF>
+        on the CIAO website for an up-to-date listing of known bugs.
+      </PARA></BUGS>
+<VERSION>CIAO 3.0</VERSION>
+<LASTMODIFIED>June 2003</LASTMODIFIED>
+
+</ENTRY>
+
+</cxchelptopics>
