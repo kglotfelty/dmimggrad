@@ -27,7 +27,7 @@
 #include <cxcregion.h>
 
 
-typedef enum { LAPLACE, ROBERTS, PREWITT, SOBEL, ROBISON, KIRSCH } Shapes;
+typedef enum { LAPLACE, ROBERTS, PREWITT, SOBEL, ROBISON, KIRSCH, GAUSSIAN } Shapes;
 
 typedef enum { X_GRAD, Y_GRAD, MAGNITUDE, ANGLE } Direction;
 
@@ -39,10 +39,11 @@ typedef enum { X_GRAD, Y_GRAD, MAGNITUDE, ANGLE } Direction;
 #include "dmimgio.h"
 
 
-short *evaluate_kernel(Shapes shape, Direction xy, long *kx, long *ky);
+float *evaluate_kernel(Shapes shape, float width, Direction xy, long *kx, long *ky);
 Shapes get_shape( char *kernel ); 
 Direction get_dir( char *output_val );
-double *slide_convovle(void *data, dmDataType dt, long *lAxes, short *mask, Shapes saape, Direction dir );
+double *slide_convovle(void *data, dmDataType dt, long *lAxes, short *mask, Shapes shape, float width, Direction dir );
+double *combine_gradients( Direction dir, double *outdata_x, double *outdata_y, long *lAxes);
 int dmimggrad(void);
 
 
@@ -62,6 +63,8 @@ Shapes get_shape( char *kernel )
         shape = ROBISON;
     } else if (strcmp(kernel, "kirsch") == 0) {
         shape = KIRSCH;
+    } else if (strcmp(kernel, "gaussian") ==0) {
+        shape = GAUSSIAN;
     } else {
         shape = -1;
     }
@@ -72,68 +75,99 @@ Shapes get_shape( char *kernel )
 
 
 
-short *evaluate_kernel(Shapes shape, Direction xy, long *kx, long *ky)
+float *evaluate_kernel(Shapes shape, float width, Direction xy, long *kx, long *ky)
 {
-    short *retval;
+    float *retval;
     *kx = 3;
     *ky = 3;
-    retval = (short *) calloc(9, sizeof(short));
+    retval = (float *) calloc(9, sizeof(float));
 
 
     switch (shape) {
     case LAPLACE:
         {
-            short op[9] = { 0, 1, 0, 1, -4, 1, 0, 1, 0 };
-            memcpy(retval, op, 9 * sizeof(short));
+            float op[9] = { 0, 1, 0, 1, -4, 1, 0, 1, 0 };
+            memcpy(retval, op, 9 * sizeof(float));
             break;
         }
     case ROBERTS:
         *kx = 2;
         *ky = 2;
         if (xy == X_GRAD) {
-            short op[4] = { 1, 0, 0, -1 };
-            memcpy(retval, op, 4 * sizeof(short));
+            float op[4] = { 1, 0, 0, -1 };
+            memcpy(retval, op, 4 * sizeof(float));
         } else {
-            short op[4] = { 0, 1, -1, 0 };
-            memcpy(retval, op, 4 * sizeof(short));
+            float op[4] = { 0, 1, -1, 0 };
+            memcpy(retval, op, 4 * sizeof(float));
         }
         break;
     case PREWITT:
         if (xy == X_GRAD) {
-            short op[9] = { 1, 1, 1, 0, 0, 0, -1, -1, -1 };
-            memcpy(retval, op, 9 * sizeof(short));
+            float op[9] = { 1, 1, 1, 0, 0, 0, -1, -1, -1 };
+            memcpy(retval, op, 9 * sizeof(float));
         } else {
-            short op[9] = { -1, 0, 1, -1, 0, 1, -1, 0, 1 };
-            memcpy(retval, op, 9 * sizeof(short));
+            float op[9] = { -1, 0, 1, -1, 0, 1, -1, 0, 1 };
+            memcpy(retval, op, 9 * sizeof(float));
         }
         break;
     case SOBEL:
         if (xy == X_GRAD) {
-            short op[9] = { 1, 2, 1, 0, 0, 0, -1, -2, -1 };
-            memcpy(retval, op, 9 * sizeof(short));
+            float op[9] = { 1, 2, 1, 0, 0, 0, -1, -2, -1 };
+            memcpy(retval, op, 9 * sizeof(float));
         } else {
-            short op[9] = { -1, 0, 1, -2, 0, 2, -1, 0, 1 };
-            memcpy(retval, op, 9 * sizeof(short));
+            float op[9] = { -1, 0, 1, -2, 0, 2, -1, 0, 1 };
+            memcpy(retval, op, 9 * sizeof(float));
         }
         break;
     case ROBISON:
         if (xy == X_GRAD) {
-            short op[9] = { 1, 1, 1, 1, -2, 1, -1, -1, -1 };
-            memcpy(retval, op, 9 * sizeof(short));
+            float op[9] = { 1, 1, 1, 1, -2, 1, -1, -1, -1 };
+            memcpy(retval, op, 9 * sizeof(float));
         } else {
-            short op[9] = { -1, 1, 1, -1, -2, 1, -1, 1, 1 };
-            memcpy(retval, op, 9 * sizeof(short));
+            float op[9] = { -1, 1, 1, -1, -2, 1, -1, 1, 1 };
+            memcpy(retval, op, 9 * sizeof(float));
         }
         break;
     case KIRSCH:
         if (xy == X_GRAD) {
-            short op[9] = { 3, 3, 3, 3, 0, 3, -5, -5, -5 };
-            memcpy(retval, op, 9 * sizeof(short));
+            float op[9] = { 3, 3, 3, 3, 0, 3, -5, -5, -5 };
+            memcpy(retval, op, 9 * sizeof(float));
         } else {
-            short op[9] = { -5, 3, 3, -5, 0, 3, -5, 3, 3 };
-            memcpy(retval, op, 9 * sizeof(short));
+            float op[9] = { -5, 3, 3, -5, 0, 3, -5, 3, 3 };
+            memcpy(retval, op, 9 * sizeof(float));
         }
         break;
+    case GAUSSIAN:
+        {
+            float nsigma = 4.0;
+            long half_width = (nsigma*width)+0.5;
+            *kx = (2*half_width)+1;
+            *ky = *kx;
+            free(retval);
+            retval = (float *) calloc( ((*kx)*(*ky)), sizeof(float));
+            long ix, iy, dx, dy;
+            for (ix=0;ix< *kx;ix++) {
+                for (iy=0;iy< *ky;iy++) {
+                    dx = ix-half_width;
+                    dy = iy-half_width;
+                    long dd;
+                    if ( xy == X_GRAD ) {
+                        dd = dx;
+                    } else {
+                        dd = dy;
+                    }
+                    
+                    retval[ix+iy*(*kx)] = (dd)*exp( -1.0*(dx*dx+dy*dy)/(width*width));
+                    //printf("%g\n", retval[ix+iy*(*kx)] );
+                } // end for iy
+            } // end for ix
+
+
+            break;
+        }
+
+
+
     default:
         retval = NULL;
     }
@@ -143,17 +177,17 @@ short *evaluate_kernel(Shapes shape, Direction xy, long *kx, long *ky)
 
 }
 
-double *slide_convovle(void *data, dmDataType dt, long *lAxes, short *mask, Shapes shape, Direction dir )
+double *slide_convovle(void *data, dmDataType dt, long *lAxes, short *mask, Shapes shape, float width, Direction dir )
 {
 
     long dkx, dky;    
     long xx, yy;
     long ix, iy;
     double *outdata_x;
-    short *kernel;
+    float *kernel;
     long kx, ky;
     outdata_x = (double *) calloc(lAxes[0] * lAxes[1], sizeof(double));
-    if (NULL == (kernel = evaluate_kernel(shape, dir, &kx, &ky))) {
+    if (NULL == (kernel = evaluate_kernel(shape, width, dir, &kx, &ky))) {
         err_msg("ERROR: Unsupported gradient function ");
         return (NULL);
     }
@@ -284,12 +318,14 @@ int dmimggrad(void)
 
     Direction dir;
     Shapes shape;
+    float kwidth;
 
     /* Get the parameters */
     clgetstr("infile", infile, DS_SZ_FNAME);
     clgetstr("outfile", outfile, DS_SZ_FNAME);
     clgetstr("gradient", operator, 30);
     clgetstr("value", output_val, 10);
+    kwidth = clgetd("width");
     clobber = clgetb("clobber");
     verbose = clgeti("verbose");
 
@@ -320,7 +356,7 @@ int dmimggrad(void)
 
     /* Compute the X-gradient (if needed) */
     if (Y_GRAD != dir) {
-        outdata_x = slide_convovle( data, dt, lAxes, mask, shape, X_GRAD );
+        outdata_x = slide_convovle( data, dt, lAxes, mask, shape, kwidth, X_GRAD );
 
     } else {                    /* end X-dir */
         outdata_x = NULL;
@@ -331,7 +367,7 @@ int dmimggrad(void)
         if ((strcmp(operator, "laplace") == 0) && (outdata_x)) {
             outdata_y = outdata_x;
         } else {
-            outdata_y = slide_convovle( data, dt, lAxes, mask, shape, Y_GRAD );
+            outdata_y = slide_convovle( data, dt, lAxes, mask, shape, kwidth, Y_GRAD );
         }
     } else {
         outdata_y = NULL;
