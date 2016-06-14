@@ -27,8 +27,7 @@
 #include <cxcregion.h>
 
 
-typedef enum { LAPLACE, ROBERTS, PREWITT, SOBEL, ROBISON,
-        KIRSCH } Gradients;
+typedef enum { LAPLACE, ROBERTS, PREWITT, SOBEL, ROBISON, KIRSCH } Shapes;
 
 typedef enum { X_GRAD, Y_GRAD, MAGNITUDE, ANGLE } Direction;
 
@@ -40,23 +39,55 @@ typedef enum { X_GRAD, Y_GRAD, MAGNITUDE, ANGLE } Direction;
 #include "dmimgio.h"
 
 
-short *evaluate_kernel(char *kernel, Direction xy, long *kx, long *ky);
+short *evaluate_kernel(Shapes shape, Direction xy, long *kx, long *ky);
+Shapes get_shape( char *kernel ); 
 Direction get_dir( char *output_val );
-double *slide_convovle(void *data, dmDataType dt, long *lAxes, short *mask, char *operator, Direction dir );
+double *slide_convovle(void *data, dmDataType dt, long *lAxes, short *mask, Shapes saape, Direction dir );
 int dmimggrad(void);
 
 
-short *evaluate_kernel(char *kernel, Direction xy, long *kx, long *ky)
+Shapes get_shape( char *kernel )
+{
+    Shapes shape;
+
+    if (strcmp(kernel, "laplace") == 0) {
+        shape = LAPLACE;
+    } else if (strcmp(kernel, "roberts") == 0) {
+        shape = ROBERTS;
+    } else if (strcmp(kernel, "prewitt") == 0) {
+        shape = PREWITT;
+    } else if (strcmp(kernel, "sobel") == 0) {
+        shape = SOBEL;
+    } else if (strcmp(kernel, "robison") == 0) {
+        shape = ROBISON;
+    } else if (strcmp(kernel, "kirsch") == 0) {
+        shape = KIRSCH;
+    } else {
+        shape = -1;
+    }
+    
+    return (shape);
+}
+
+
+
+
+short *evaluate_kernel(Shapes shape, Direction xy, long *kx, long *ky)
 {
     short *retval;
     *kx = 3;
     *ky = 3;
     retval = (short *) calloc(9, sizeof(short));
 
-    if (strcmp(kernel, "laplace") == 0) {
-        short op[9] = { 0, 1, 0, 1, -4, 1, 0, 1, 0 };
-        memcpy(retval, op, 9 * sizeof(short));
-    } else if (strcmp(kernel, "roberts") == 0) {
+
+    switch (shape) {
+    case LAPLACE:
+        {
+            short op[9] = { 0, 1, 0, 1, -4, 1, 0, 1, 0 };
+            memcpy(retval, op, 9 * sizeof(short));
+            break;
+        }
+    case ROBERTS:
         *kx = 2;
         *ky = 2;
         if (xy == X_GRAD) {
@@ -66,7 +97,8 @@ short *evaluate_kernel(char *kernel, Direction xy, long *kx, long *ky)
             short op[4] = { 0, 1, -1, 0 };
             memcpy(retval, op, 4 * sizeof(short));
         }
-    } else if (strcmp(kernel, "prewitt") == 0) {
+        break;
+    case PREWITT:
         if (xy == X_GRAD) {
             short op[9] = { 1, 1, 1, 0, 0, 0, -1, -1, -1 };
             memcpy(retval, op, 9 * sizeof(short));
@@ -74,7 +106,8 @@ short *evaluate_kernel(char *kernel, Direction xy, long *kx, long *ky)
             short op[9] = { -1, 0, 1, -1, 0, 1, -1, 0, 1 };
             memcpy(retval, op, 9 * sizeof(short));
         }
-    } else if (strcmp(kernel, "sobel") == 0) {
+        break;
+    case SOBEL:
         if (xy == X_GRAD) {
             short op[9] = { 1, 2, 1, 0, 0, 0, -1, -2, -1 };
             memcpy(retval, op, 9 * sizeof(short));
@@ -82,7 +115,8 @@ short *evaluate_kernel(char *kernel, Direction xy, long *kx, long *ky)
             short op[9] = { -1, 0, 1, -2, 0, 2, -1, 0, 1 };
             memcpy(retval, op, 9 * sizeof(short));
         }
-    } else if (strcmp(kernel, "robison") == 0) {
+        break;
+    case ROBISON:
         if (xy == X_GRAD) {
             short op[9] = { 1, 1, 1, 1, -2, 1, -1, -1, -1 };
             memcpy(retval, op, 9 * sizeof(short));
@@ -90,7 +124,8 @@ short *evaluate_kernel(char *kernel, Direction xy, long *kx, long *ky)
             short op[9] = { -1, 1, 1, -1, -2, 1, -1, 1, 1 };
             memcpy(retval, op, 9 * sizeof(short));
         }
-    } else if (strcmp(kernel, "kirsch") == 0) {
+        break;
+    case KIRSCH:
         if (xy == X_GRAD) {
             short op[9] = { 3, 3, 3, 3, 0, 3, -5, -5, -5 };
             memcpy(retval, op, 9 * sizeof(short));
@@ -98,11 +133,9 @@ short *evaluate_kernel(char *kernel, Direction xy, long *kx, long *ky)
             short op[9] = { -5, 3, 3, -5, 0, 3, -5, 3, 3 };
             memcpy(retval, op, 9 * sizeof(short));
         }
-    } else {
-        free(retval);
+        break;
+    default:
         retval = NULL;
-        *kx = 0;
-        *ky = 0;
     }
 
 
@@ -110,7 +143,7 @@ short *evaluate_kernel(char *kernel, Direction xy, long *kx, long *ky)
 
 }
 
-double *slide_convovle(void *data, dmDataType dt, long *lAxes, short *mask, char *operator, Direction dir )
+double *slide_convovle(void *data, dmDataType dt, long *lAxes, short *mask, Shapes shape, Direction dir )
 {
 
     long dkx, dky;    
@@ -120,9 +153,8 @@ double *slide_convovle(void *data, dmDataType dt, long *lAxes, short *mask, char
     short *kernel;
     long kx, ky;
     outdata_x = (double *) calloc(lAxes[0] * lAxes[1], sizeof(double));
-    if (NULL == (kernel = evaluate_kernel(operator, dir, &kx, &ky))) {
-        err_msg("ERROR: Unsupported gradient function '%s'\n",
-                operator );
+    if (NULL == (kernel = evaluate_kernel(shape, dir, &kx, &ky))) {
+        err_msg("ERROR: Unsupported gradient function ");
         return (NULL);
     }
 
@@ -166,8 +198,7 @@ Direction get_dir( char *output_val )
 {
     Direction dir;
     
-    switch (*output_val) {
-
+    switch (*output_val) {  // switch on first letter in direction string
         case 'x':
             dir = X_GRAD;
             break;
@@ -252,6 +283,7 @@ int dmimggrad(void)
     double *outdata_y;
 
     Direction dir;
+    Shapes shape;
 
     /* Get the parameters */
     clgetstr("infile", infile, DS_SZ_FNAME);
@@ -284,10 +316,11 @@ int dmimggrad(void)
     }
 
     dir = get_dir( output_val );
+    shape = get_shape( operator );
 
     /* Compute the X-gradient (if needed) */
     if (Y_GRAD != dir) {
-        outdata_x = slide_convovle( data, dt, lAxes, mask, operator, X_GRAD );
+        outdata_x = slide_convovle( data, dt, lAxes, mask, shape, X_GRAD );
 
     } else {                    /* end X-dir */
         outdata_x = NULL;
@@ -298,7 +331,7 @@ int dmimggrad(void)
         if ((strcmp(operator, "laplace") == 0) && (outdata_x)) {
             outdata_y = outdata_x;
         } else {
-            outdata_y = slide_convovle( data, dt, lAxes, mask, operator, Y_GRAD );
+            outdata_y = slide_convovle( data, dt, lAxes, mask, shape, Y_GRAD );
         }
     } else {
         outdata_y = NULL;
