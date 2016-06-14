@@ -318,7 +318,7 @@ int dmimggrad(void)
 
     Direction dir;
     Shapes shape;
-    float kwidth;
+    double kwidth;
 
     /* Get the parameters */
     clgetstr("infile", infile, DS_SZ_FNAME);
@@ -353,11 +353,15 @@ int dmimggrad(void)
 
     dir = get_dir( output_val );
     shape = get_shape( operator );
+    if ( (GAUSSIAN == shape) && (INDEFD == kwidth)) {
+        err_msg("ERRROR: Please specify the width for this gradient");
+        return (-1);
+    }
+    
 
     /* Compute the X-gradient (if needed) */
     if (Y_GRAD != dir) {
         outdata_x = slide_convovle( data, dt, lAxes, mask, shape, kwidth, X_GRAD );
-
     } else {                    /* end X-dir */
         outdata_x = NULL;
     }
