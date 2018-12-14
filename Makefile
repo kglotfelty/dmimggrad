@@ -45,3 +45,4 @@ kjg: $(EXEC)
 	/bin/cp -f $(EXEC) $(KJG)/binexe/
 	/bin/cp -f $(KJG)/bin/dmlist $(KJG)/bin/$(EXEC)
 	/bin/cp -f $(PAR_FILES) $(KJG)/param/$(PAR_FILES)
+	/bin/cp -f $(XML_FILES) $(KJG)/share/doc/xml/
