@@ -150,12 +150,13 @@ float *evaluate_kernel(Shapes shape, float width, Direction xy, long *kx, long *
                 for (iy=0;iy< *ky;iy++) {
                     dx = ix-half_width;
                     dy = iy-half_width;
-                    long dd;
+                    float dd;
                     if ( xy == X_GRAD ) {
                         dd = dx;
                     } else {
                         dd = dy;
                     }
+                    dd  = dd / sqrt( 2.0*3.141592*width*width) ;
                     
                     retval[ix+iy*(*kx)] = (dd)*exp( -1.0*(dx*dx+dy*dy)/(width*width));
                     //printf("%g\n", retval[ix+iy*(*kx)] );
