@@ -18,8 +18,8 @@ XML_FILES         = dmimggrad.xml
 
 SRCS	= dmimggrad.c t_dmimggrad.c
 
-LOCAL_LIBS = -L$(MK_TOP)/da/analysis/dmtools/dmimgio/ -ldmimgio
-LOCAL_INC  = -I$(MK_TOP)/da/analysis/dmtools/dmimgio/
+LOCAL_LIBS = -ldmimgio
+LOCAL_INC  =
 
 OBJS	= $(SRCS:.c=.o)
 
