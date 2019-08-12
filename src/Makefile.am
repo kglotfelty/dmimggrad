@@ -8,7 +8,7 @@ binexe_PROGRAMS = $(tool)
 
 dmimggrad_SOURCES = dmimggrad.c t_dmimggrad.c
 dmimggrad_CPPFLAGS = $(CIAO_CFLAGS)
-dmimggrad_LDADD = $(CIAO_LIBS) -ldmimgio
+dmimggrad_LDADD = $(CIAO_LIBS)
 dmimggrad_LINK = $(CXX) -o $@ -Wl,-rpath,$(prefix)/lib -Wl,-rpath,$(prefix)/ots/lib 
 
 # problems with libstdc++ and cxcparam on Linux :(
