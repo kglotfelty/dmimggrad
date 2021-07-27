@@ -63,6 +63,7 @@ H***************************************************************** */
 
 #include "dslib.h"
 
+extern int dmimggrad(void);
 
 void main(int argc, char** argv)
 {

@@ -42,7 +42,7 @@ typedef enum { X_GRAD, Y_GRAD, MAGNITUDE, ANGLE } Direction;
 float *evaluate_kernel(Shapes shape, float width, Direction xy, long *kx, long *ky);
 Shapes get_shape( char *kernel ); 
 Direction get_dir( char *output_val );
-double *slide_convovle(void *data, dmDataType dt, long *lAxes, short *mask, Shapes shape, float width, Direction dir );
+double *slide_convovle(Image *in_image, Shapes shape, float width, Direction dir );
 double *combine_gradients( Direction dir, double *outdata_x, double *outdata_y, long *lAxes);
 int dmimggrad(void);
 
@@ -178,7 +178,7 @@ float *evaluate_kernel(Shapes shape, float width, Direction xy, long *kx, long *
 
 }
 
-double *slide_convovle(void *data, dmDataType dt, long *lAxes, short *mask, Shapes shape, float width, Direction dir )
+double *slide_convovle(Image *in_image, Shapes shape, float width, Direction dir )
 {
 
     long dkx, dky;    
@@ -187,6 +187,8 @@ double *slide_convovle(void *data, dmDataType dt, long *lAxes, short *mask, Shap
     double *outdata_x;
     float *kernel;
     long kx, ky;
+    long *lAxes = in_image->lAxes;
+
     outdata_x = (double *) calloc(lAxes[0] * lAxes[1], sizeof(double));
     if (NULL == (kernel = evaluate_kernel(shape, width, dir, &kx, &ky))) {
         err_msg("ERROR: Unsupported gradient function ");
@@ -212,7 +214,7 @@ double *slide_convovle(void *data, dmDataType dt, long *lAxes, short *mask, Shap
                             (ax >= lAxes[0]) || (ay >= lAxes[1])) {
                             continue;
                         }
-                        dater = get_image_value(data, dt, ax, ay, lAxes, mask);
+                        dater = get_image_value(in_image, ax, ay);
                         if (ds_dNAN(dater)) {
                             continue;
                         }
@@ -301,16 +303,6 @@ int dmimggrad(void)
     short clobber;
     short verbose;
 
-    void *data;
-    long *lAxes;
-    regRegion *dss;
-    long null;
-    short has_null;
-    short *mask;
-    dmDataType dt;
-    dmBlock *inBlock;
-    dmDescriptor *xdesc, *ydesc;
-
     dmBlock *outBlock;
     dmDescriptor *outDesc;
 
@@ -320,6 +312,9 @@ int dmimggrad(void)
     Direction dir;
     Shapes shape;
     double kwidth;
+
+    Image *in_image;
+
 
     /* Get the parameters */
     clgetstr("infile", infile, DS_SZ_FNAME);
@@ -331,22 +326,10 @@ int dmimggrad(void)
     verbose = clgeti("verbose");
 
 
-    /* Boiler plate */
-    if (NULL == (inBlock = dmImageOpen(infile))) {
-        err_msg("ERROR: Cannot open image '%s'\n", infile);
-        return (-1);
-    }
-    if (dmUNKNOWNTYPE == (dt = get_image_data(inBlock, &data, &lAxes,
-                                              &dss, &null, &has_null))) {
-        err_msg
-            ("ERROR: Cannot get image data or unknown image data-type for "
-             "file '%s'\n", infile);
-        return (-1);
-    }
-    get_image_wcs(inBlock, &xdesc, &ydesc);
-    mask = get_image_mask(inBlock, data, dt, lAxes, dss, null, has_null,
-                          xdesc, ydesc);
 
+    if (NULL == (in_image = load_image(infile))) {
+        return -1;
+    }
 
     if (ds_clobber(outfile, clobber, NULL) != 0) {
         return (-1);
@@ -362,7 +345,7 @@ int dmimggrad(void)
 
     /* Compute the X-gradient (if needed) */
     if (Y_GRAD != dir) {
-        outdata_x = slide_convovle( data, dt, lAxes, mask, shape, kwidth, X_GRAD );
+        outdata_x = slide_convovle( in_image, shape, kwidth, X_GRAD );
     } else {                    /* end X-dir */
         outdata_x = NULL;
     }
@@ -372,27 +355,27 @@ int dmimggrad(void)
         if ((strcmp(operator, "laplace") == 0) && (outdata_x)) {
             outdata_y = outdata_x;
         } else {
-            outdata_y = slide_convovle( data, dt, lAxes, mask, shape, kwidth, Y_GRAD );
+            outdata_y = slide_convovle( in_image, shape, kwidth, Y_GRAD );
         }
     } else {
         outdata_y = NULL;
     }
         
-    double *outdata = combine_gradients( dir, outdata_x, outdata_y, lAxes );
+    double *outdata = combine_gradients( dir, outdata_x, outdata_y, in_image->lAxes );
 
 
-    if (NULL == (outBlock = dmImageCreate(outfile, dmDOUBLE, lAxes, 2))) {
+    if (NULL == (outBlock = dmImageCreate(outfile, dmDOUBLE, in_image->lAxes, 2))) {
         err_msg("ERROR: Cannot create output image '%s'\n", outfile);
         return (-1);
     }
     outDesc = dmImageGetDataDescriptor(outBlock);
-    dmBlockCopy(inBlock, outBlock, "HEADER");
-    ds_copy_full_header(inBlock, outBlock, "dmimggrad", 0);
+    dmBlockCopy(in_image->block, outBlock, "HEADER");
+    ds_copy_full_header(in_image->block, outBlock, "dmimggrad", 0);
     put_param_hist_info(outBlock, "dmimggrad", NULL, 0);
-    dmBlockCopyWCS(inBlock, outBlock);
-    dmSetArray_d(outDesc, outdata, (lAxes[0] * lAxes[1]));
+    dmBlockCopyWCS(in_image->block, outBlock);
+    dmSetArray_d(outDesc, outdata, (in_image->lAxes[0] * in_image->lAxes[1]));
     dmImageClose(outBlock);
-    dmImageClose(inBlock);
+    dmImageClose(in_image->block);
 
     if ( outdata_x ) {
         free( outdata_x );
